@@ -5,20 +5,19 @@ canvas.width = 700
 canvas.height = 700
 
 // ------------- DEBUG -----------------------------------------------
-const DEBUG = true             // ← pon false en producción
+const DEBUG = false // ← pon false en producción
 function dbg(...args) {
   if (DEBUG) console.log('[DBG]', ...args)
 }
 
 // ------------- COLLISION DETECTION ------------------------------------
 function rectangularCollision({ rect1, rect2 }) {
-  const hit = (
-    rect1.position.x + rect1.width  > rect2.position.x &&
-    rect1.position.x               < rect2.position.x + rect2.width &&
+  const hit =
+    rect1.position.x + rect1.width > rect2.position.x &&
+    rect1.position.x < rect2.position.x + rect2.width &&
     rect1.position.y + rect1.height > rect2.position.y &&
-    rect1.position.y               < rect2.position.y + rect2.height
-  )
-  
+    rect1.position.y < rect2.position.y + rect2.height
+
   if (DEBUG && hit) dbg('💥 COLISION', { p: rect1.position, b: rect2.position })
   return hit
 }
@@ -85,6 +84,18 @@ const player = new Sprite({
   }
 })
 
+// Devuelve el rectángulo de colisión solo para la mitad inferior
+function playerFootRect() {
+  return {
+    position: {
+      x: player.position.x, // igual que ahora
+      y: player.position.y + player.height / 2 // parte baja
+    },
+    width: player.width,
+    height: player.height / 2
+  }
+}
+
 const background = new Sprite({
   position: {
     x: offset.x,
@@ -132,8 +143,16 @@ function animate() {
     renderable.draw()
   })
 
+  // --- Debug: visualizar foot collision box -----------------------------------------
+  if (DEBUG) {
+    c.strokeStyle = 'red'
+    c.lineWidth = 1
+    const f = playerFootRect()
+    c.strokeRect(f.position.x, f.position.y, f.width, f.height)
+  }
+
   // --- Pinta rectángulos de colisión -------------------------------------------------
-  if (collisionMode.active || collisionMode.rectangles.length) {
+  if (DEBUG ? (collisionMode.active || collisionMode.rectangles.length) : collisionMode.active) {
     c.strokeStyle = 'yellow'
     c.lineWidth = 2
 
@@ -160,14 +179,15 @@ function animate() {
     player.animate = true
     player.image.src = player.sprites.up.src
 
-    const predicted = 6               // velocidad
+    const predicted = 6 // velocidad
 
     // ¿chocaría con alguno?
     let collision = false
+    const foot = playerFootRect()
     for (const b of boundaries) {
       if (
         rectangularCollision({
-          rect1: player,
+          rect1: foot, // ← solo piernas
           rect2: {
             ...b,
             position: { x: b.position.x, y: b.position.y + predicted } // ← mueve fantasma
@@ -180,19 +200,20 @@ function animate() {
       }
     }
 
-    if (!collision) movables.forEach(m => (m.position.y += predicted))
+    if (!collision) movables.forEach((m) => (m.position.y += predicted))
   } else if (keys.a.pressed && lastKey === 'a') {
     player.animate = true
     player.image.src = player.sprites.left.src
 
-    const predicted = 6               // velocidad
+    const predicted = 6 // velocidad
 
     // ¿chocaría con alguno?
     let collision = false
+    const foot = playerFootRect()
     for (const b of boundaries) {
       if (
         rectangularCollision({
-          rect1: player,
+          rect1: foot, // ← solo piernas
           rect2: {
             ...b,
             position: { x: b.position.x + predicted, y: b.position.y } // ← mueve fantasma
@@ -205,19 +226,20 @@ function animate() {
       }
     }
 
-    if (!collision) movables.forEach(m => (m.position.x += predicted))
+    if (!collision) movables.forEach((m) => (m.position.x += predicted))
   } else if (keys.s.pressed && lastKey === 's') {
     player.animate = true
     player.image.src = player.sprites.down.src
 
-    const predicted = 6               // velocidad
+    const predicted = 6 // velocidad
 
     // ¿chocaría con alguno?
     let collision = false
+    const foot = playerFootRect()
     for (const b of boundaries) {
       if (
         rectangularCollision({
-          rect1: player,
+          rect1: foot, // ← solo piernas
           rect2: {
             ...b,
             position: { x: b.position.x, y: b.position.y - predicted } // ← mueve fantasma
@@ -230,19 +252,20 @@ function animate() {
       }
     }
 
-    if (!collision) movables.forEach(m => (m.position.y -= predicted))
+    if (!collision) movables.forEach((m) => (m.position.y -= predicted))
   } else if (keys.d.pressed && lastKey === 'd') {
     player.animate = true
     player.image.src = player.sprites.right.src
 
-    const predicted = 6               // velocidad
+    const predicted = 6 // velocidad
 
     // ¿chocaría con alguno?
     let collision = false
+    const foot = playerFootRect()
     for (const b of boundaries) {
       if (
         rectangularCollision({
-          rect1: player,
+          rect1: foot, // ← solo piernas
           rect2: {
             ...b,
             position: { x: b.position.x - predicted, y: b.position.y } // ← mueve fantasma
@@ -255,7 +278,7 @@ function animate() {
       }
     }
 
-    if (!collision) movables.forEach(m => (m.position.x -= predicted))
+    if (!collision) movables.forEach((m) => (m.position.x -= predicted))
   }
 }
 
