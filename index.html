@@ -34,11 +34,36 @@
     button:hover {
       background-color: #ddd;
     }
+
+    .switch{position:relative;display:inline-block;width:50px;height:24px;margin-right:8px;}
+    .switch input{opacity:0;width:0;height:0;}
+    .slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;
+            background:#ccc;transition:.2s;border-radius:24px;}
+    .slider:before{position:absolute;content:'';height:18px;width:18px;left:3px;bottom:3px;
+                   background:white;transition:.2s;border-radius:50%;}
+    input:checked + .slider{background:#66bb6a;}
+    input:checked + .slider:before{transform:translateX(26px);}
+    .msg{font-family:'Press Start 2P',sans-serif;font-size:10px;margin-left:12px;color:#ffd54f;}
   </style>
 </head>
 
 <div style="display: inline-block; position: relative">
   <canvas style="width: 700px; height: 700px;"></canvas>
+</div>
+
+<!-- Collision Mode UI -->
+<div style="margin-top: 10px; text-align: center;">
+  <!-- Toggle -->
+  <label class="switch">
+    <input type="checkbox" id="collisionToggle">
+    <span class="slider round"></span>
+  </label>
+
+  <!-- Botón Guardar -->
+  <button id="saveBounds">Guardar</button>
+
+  <!-- Feedback -->
+  <span id="collisionMsg" class="msg"></span>
 </div>
 <script src="js/utils.js"></script>
 <script src="classes.js"></script>

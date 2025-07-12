@@ -10,6 +10,26 @@ const offset = {
   y: -0 // Move background up so player appears lower on the map
 }
 
+// --- Modo colisiones --------------------------------------------------------
+const collisionMode = {
+  active: false,         // ¿el toggle está ON?
+  start: null,           // punto de inicio (mousedown)
+  currentRect: null,     // rectángulo fantasma mientras arrastras
+  rectangles: []         // rects definitivos creados esta sesión
+};
+
+// Cargar datos previos (si existen)
+const stored = localStorage.getItem('lm-collisions');
+if (stored) {
+  try {
+    collisionMode.rectangles = JSON.parse(stored);
+  } catch (e) {
+    console.warn('Error parsing stored collisions:', e);
+    collisionMode.rectangles = [];
+  }
+}
+
+const boundaries = []
 
 const image = new Image()
 image.src = './img/DptoMap.png'
@@ -54,6 +74,13 @@ const background = new Sprite({
 
 // Start the game when background image loads
 image.addEventListener('load', () => {
+  // Create boundaries from saved collision rectangles
+  collisionMode.rectangles.forEach(r => {
+    boundaries.push(new Boundary({ position: { x: r.x, y: r.y }, width: r.w, height: r.h }));
+  });
+  movables.push(...boundaries);      // para que se muevan con el mapa
+  renderables.unshift(...boundaries); // para que se dibujen debajo del player
+  
   animate()
 })
 
@@ -80,6 +107,25 @@ function animate() {
   renderables.forEach((renderable) => {
     renderable.draw()
   })
+
+  // --- Pinta rectángulos de colisión -------------------------------------------------
+  if (collisionMode.active || collisionMode.rectangles.length) {
+    c.strokeStyle = 'yellow';
+    c.lineWidth = 2;
+
+    // Rects guardados (persistentes)
+    collisionMode.rectangles.forEach(r => {
+      c.strokeRect(r.x - background.position.x,
+                   r.y - background.position.y,
+                   r.w, r.h);
+    });
+
+    // Rect fantasma mientras arrastro
+    if (collisionMode.currentRect) {
+      const r = collisionMode.currentRect;
+      c.strokeRect(r.x, r.y, r.w, r.h);
+    }
+  }
 
   player.animate = false
 
@@ -148,3 +194,57 @@ window.addEventListener('keyup', (e) => {
       break
   }
 })
+
+document.getElementById('collisionToggle').addEventListener('change', e => {
+  collisionMode.active = e.target.checked;
+  document.getElementById('collisionMsg').textContent =
+    collisionMode.active ? 'Modo colisiones ACTIVADO' : '';
+});
+
+document.getElementById('saveBounds').addEventListener('click', () => {
+  localStorage.setItem('lm-collisions', JSON.stringify(collisionMode.rectangles));
+  document.getElementById('collisionMsg').textContent = 'Colisiones guardadas ✔';
+});
+
+canvas.addEventListener('mousedown', e => {
+  if (!collisionMode.active) return;
+  const r = canvas.getBoundingClientRect();
+  collisionMode.start = { x: e.clientX - r.left, y: e.clientY - r.top };
+});
+
+canvas.addEventListener('mousemove', e => {
+  if (!collisionMode.active || !collisionMode.start) return;
+  const r = canvas.getBoundingClientRect();
+  const now = { x: e.clientX - r.left, y: e.clientY - r.top };
+  collisionMode.currentRect = {
+    x: Math.min(collisionMode.start.x, now.x),
+    y: Math.min(collisionMode.start.y, now.y),
+    w: Math.abs(now.x - collisionMode.start.x),
+    h: Math.abs(now.y - collisionMode.start.y)
+  };
+});
+
+canvas.addEventListener('mouseup', e => {
+  if (!collisionMode.active || !collisionMode.start) return;
+  if (!collisionMode.currentRect) return;
+  const { x, y, w, h } = collisionMode.currentRect;
+  // Guarda en coords de mundo (suma offset del fondo)
+  const worldX = x + background.position.x;
+  const worldY = y + background.position.y;
+  
+  collisionMode.rectangles.push({
+    x: worldX,
+    y: worldY,
+    w, h
+  });
+  
+  // Añadir boundary en tiempo real para activar colisión inmediatamente
+  const newBoundary = new Boundary({ position: { x: worldX, y: worldY }, width: w, height: h });
+  boundaries.push(newBoundary);
+  movables.push(newBoundary);
+  renderables.unshift(newBoundary);
+  
+  collisionMode.start = null;
+  collisionMode.currentRect = null;
+  document.getElementById('collisionMsg').textContent = 'Límites definidos correctamente';
+});

@@ -84,5 +84,15 @@ class Sprite {
   }
 }
 
-
-
+class Boundary {
+  constructor({ position, width = 96, height = 96 }) {
+    this.position = position
+    this.width = width
+    this.height = height
+  }
+  
+  draw() {
+    c.fillStyle = 'rgba(255,0,0,0.0)' // invisible hitbox
+    c.fillRect(this.position.x, this.position.y, this.width, this.height)
+  }
+}
