@@ -4,6 +4,24 @@ const c = canvas.getContext('2d')
 canvas.width = 700
 canvas.height = 700
 
+// ------------- DEBUG -----------------------------------------------
+const DEBUG = true             // ← pon false en producción
+function dbg(...args) {
+  if (DEBUG) console.log('[DBG]', ...args)
+}
+
+// ------------- COLLISION DETECTION ------------------------------------
+function rectangularCollision({ rect1, rect2 }) {
+  const hit = (
+    rect1.position.x + rect1.width  > rect2.position.x &&
+    rect1.position.x               < rect2.position.x + rect2.width &&
+    rect1.position.y + rect1.height > rect2.position.y &&
+    rect1.position.y               < rect2.position.y + rect2.height
+  )
+  
+  if (DEBUG && hit) dbg('💥 COLISION', { p: rect1.position, b: rect2.position })
+  return hit
+}
 
 const offset = {
   x: -0,
@@ -12,20 +30,23 @@ const offset = {
 
 // --- Modo colisiones --------------------------------------------------------
 const collisionMode = {
-  active: false,         // ¿el toggle está ON?
-  start: null,           // punto de inicio (mousedown)
-  currentRect: null,     // rectángulo fantasma mientras arrastras
-  rectangles: []         // rects definitivos creados esta sesión
-};
+  active: false, // ¿el toggle está ON?
+  start: null, // punto de inicio (mousedown)
+  currentRect: null, // rectángulo fantasma mientras arrastras
+  rectangles: [] // rects definitivos creados esta sesión
+}
 
 // Cargar datos previos (si existen)
-const stored = localStorage.getItem('lm-collisions');
+// NOTA: Si tienes límites guardados con la fórmula anterior (suma en lugar de resta),
+// ejecuta una vez en consola: localStorage.removeItem('lm-collisions')
+const stored = localStorage.getItem('lm-collisions')
 if (stored) {
   try {
-    collisionMode.rectangles = JSON.parse(stored);
+    collisionMode.rectangles = JSON.parse(stored)
+    dbg(`Se cargaron ${collisionMode.rectangles.length} límites persistentes`)
   } catch (e) {
-    console.warn('Error parsing stored collisions:', e);
-    collisionMode.rectangles = [];
+    console.warn('Error parsing stored collisions:', e)
+    collisionMode.rectangles = []
   }
 }
 
@@ -75,12 +96,15 @@ const background = new Sprite({
 // Start the game when background image loads
 image.addEventListener('load', () => {
   // Create boundaries from saved collision rectangles
-  collisionMode.rectangles.forEach(r => {
-    boundaries.push(new Boundary({ position: { x: r.x, y: r.y }, width: r.w, height: r.h }));
-  });
-  movables.push(...boundaries);      // para que se muevan con el mapa
-  renderables.unshift(...boundaries); // para que se dibujen debajo del player
-  
+  collisionMode.rectangles.forEach((r) => {
+    boundaries.push(
+      new Boundary({ position: { x: r.x, y: r.y }, width: r.w, height: r.h })
+    )
+  })
+  movables.push(...boundaries) // para que se muevan con el mapa
+  renderables.unshift(...boundaries) // para que se dibujen debajo del player
+
+  dbg(`Boundaries iniciales creados: ${boundaries.length}`)
   animate()
 })
 
@@ -110,20 +134,23 @@ function animate() {
 
   // --- Pinta rectángulos de colisión -------------------------------------------------
   if (collisionMode.active || collisionMode.rectangles.length) {
-    c.strokeStyle = 'yellow';
-    c.lineWidth = 2;
+    c.strokeStyle = 'yellow'
+    c.lineWidth = 2
 
     // Rects guardados (persistentes)
-    collisionMode.rectangles.forEach(r => {
-      c.strokeRect(r.x - background.position.x,
-                   r.y - background.position.y,
-                   r.w, r.h);
-    });
+    collisionMode.rectangles.forEach((r) => {
+      c.strokeRect(
+        r.x + background.position.x,
+        r.y + background.position.y,
+        r.w,
+        r.h
+      )
+    })
 
     // Rect fantasma mientras arrastro
     if (collisionMode.currentRect) {
-      const r = collisionMode.currentRect;
-      c.strokeRect(r.x, r.y, r.w, r.h);
+      const r = collisionMode.currentRect
+      c.strokeRect(r.x, r.y, r.w, r.h)
     }
   }
 
@@ -132,27 +159,103 @@ function animate() {
   if (keys.w.pressed && lastKey === 'w') {
     player.animate = true
     player.image.src = player.sprites.up.src
-    movables.forEach((movable) => {
-      movable.position.y += 6
-    })
+
+    const predicted = 6               // velocidad
+
+    // ¿chocaría con alguno?
+    let collision = false
+    for (const b of boundaries) {
+      if (
+        rectangularCollision({
+          rect1: player,
+          rect2: {
+            ...b,
+            position: { x: b.position.x, y: b.position.y + predicted } // ← mueve fantasma
+          }
+        })
+      ) {
+        collision = true
+        if (DEBUG) dbg('STOP ↑ por', b)
+        break
+      }
+    }
+
+    if (!collision) movables.forEach(m => (m.position.y += predicted))
   } else if (keys.a.pressed && lastKey === 'a') {
     player.animate = true
     player.image.src = player.sprites.left.src
-    movables.forEach((movable) => {
-      movable.position.x += 6
-    })
+
+    const predicted = 6               // velocidad
+
+    // ¿chocaría con alguno?
+    let collision = false
+    for (const b of boundaries) {
+      if (
+        rectangularCollision({
+          rect1: player,
+          rect2: {
+            ...b,
+            position: { x: b.position.x + predicted, y: b.position.y } // ← mueve fantasma
+          }
+        })
+      ) {
+        collision = true
+        if (DEBUG) dbg('STOP ← por', b)
+        break
+      }
+    }
+
+    if (!collision) movables.forEach(m => (m.position.x += predicted))
   } else if (keys.s.pressed && lastKey === 's') {
     player.animate = true
     player.image.src = player.sprites.down.src
-    movables.forEach((movable) => {
-      movable.position.y -= 6
-    })
+
+    const predicted = 6               // velocidad
+
+    // ¿chocaría con alguno?
+    let collision = false
+    for (const b of boundaries) {
+      if (
+        rectangularCollision({
+          rect1: player,
+          rect2: {
+            ...b,
+            position: { x: b.position.x, y: b.position.y - predicted } // ← mueve fantasma
+          }
+        })
+      ) {
+        collision = true
+        if (DEBUG) dbg('STOP ↓ por', b)
+        break
+      }
+    }
+
+    if (!collision) movables.forEach(m => (m.position.y -= predicted))
   } else if (keys.d.pressed && lastKey === 'd') {
     player.animate = true
     player.image.src = player.sprites.right.src
-    movables.forEach((movable) => {
-      movable.position.x -= 6
-    })
+
+    const predicted = 6               // velocidad
+
+    // ¿chocaría con alguno?
+    let collision = false
+    for (const b of boundaries) {
+      if (
+        rectangularCollision({
+          rect1: player,
+          rect2: {
+            ...b,
+            position: { x: b.position.x - predicted, y: b.position.y } // ← mueve fantasma
+          }
+        })
+      ) {
+        collision = true
+        if (DEBUG) dbg('STOP → por', b)
+        break
+      }
+    }
+
+    if (!collision) movables.forEach(m => (m.position.x -= predicted))
   }
 }
 
@@ -195,56 +298,71 @@ window.addEventListener('keyup', (e) => {
   }
 })
 
-document.getElementById('collisionToggle').addEventListener('change', e => {
-  collisionMode.active = e.target.checked;
-  document.getElementById('collisionMsg').textContent =
-    collisionMode.active ? 'Modo colisiones ACTIVADO' : '';
-});
+function getCanvasPos(e) {
+  const r = canvas.getBoundingClientRect()
+  const scaleX = canvas.width / r.width // factor de escala horizontal
+  const scaleY = canvas.height / r.height // factor vertical
+  return {
+    x: (e.clientX - r.left) * scaleX,
+    y: (e.clientY - r.top) * scaleY
+  }
+}
+
+document.getElementById('collisionToggle').addEventListener('change', (e) => {
+  collisionMode.active = e.target.checked
+  dbg('Toggle collisionMode →', collisionMode.active)
+  document.getElementById('collisionMsg').textContent = collisionMode.active
+    ? 'Modo colisiones ACTIVADO'
+    : ''
+})
 
 document.getElementById('saveBounds').addEventListener('click', () => {
-  localStorage.setItem('lm-collisions', JSON.stringify(collisionMode.rectangles));
-  document.getElementById('collisionMsg').textContent = 'Colisiones guardadas ✔';
-});
+  localStorage.setItem(
+    'lm-collisions',
+    JSON.stringify(collisionMode.rectangles)
+  )
+  document.getElementById('collisionMsg').textContent = 'Colisiones guardadas ✔'
+})
 
-canvas.addEventListener('mousedown', e => {
-  if (!collisionMode.active) return;
-  const r = canvas.getBoundingClientRect();
-  collisionMode.start = { x: e.clientX - r.left, y: e.clientY - r.top };
-});
+canvas.addEventListener('mousedown', (e) => {
+  if (!collisionMode.active) return
+  collisionMode.start = getCanvasPos(e)
+  dbg('Start rect', collisionMode.start)
+})
 
-canvas.addEventListener('mousemove', e => {
-  if (!collisionMode.active || !collisionMode.start) return;
-  const r = canvas.getBoundingClientRect();
-  const now = { x: e.clientX - r.left, y: e.clientY - r.top };
+canvas.addEventListener('mousemove', (e) => {
+  if (!collisionMode.active || !collisionMode.start) return
+  const now = getCanvasPos(e)
   collisionMode.currentRect = {
     x: Math.min(collisionMode.start.x, now.x),
     y: Math.min(collisionMode.start.y, now.y),
     w: Math.abs(now.x - collisionMode.start.x),
     h: Math.abs(now.y - collisionMode.start.y)
-  };
-});
+  }
+})
 
-canvas.addEventListener('mouseup', e => {
-  if (!collisionMode.active || !collisionMode.start) return;
-  if (!collisionMode.currentRect) return;
-  const { x, y, w, h } = collisionMode.currentRect;
-  // Guarda en coords de mundo (suma offset del fondo)
-  const worldX = x + background.position.x;
-  const worldY = y + background.position.y;
-  
-  collisionMode.rectangles.push({
-    x: worldX,
-    y: worldY,
-    w, h
-  });
-  
-  // Añadir boundary en tiempo real para activar colisión inmediatamente
-  const newBoundary = new Boundary({ position: { x: worldX, y: worldY }, width: w, height: h });
-  boundaries.push(newBoundary);
-  movables.push(newBoundary);
-  renderables.unshift(newBoundary);
-  
-  collisionMode.start = null;
-  collisionMode.currentRect = null;
-  document.getElementById('collisionMsg').textContent = 'Límites definidos correctamente';
-});
+canvas.addEventListener('mouseup', (e) => {
+  if (!collisionMode.active || !collisionMode.start) return
+  if (!collisionMode.currentRect) return
+
+  const { x, y, w, h } = collisionMode.currentRect
+  const worldX = x - background.position.x
+  const worldY = y - background.position.y
+  dbg('Rect final (world)', { worldX, worldY, w, h })
+
+  collisionMode.rectangles.push({ x: worldX, y: worldY, w, h })
+
+  const newB = new Boundary({
+    position: { x: worldX, y: worldY },
+    width: w,
+    height: h
+  })
+  boundaries.push(newB)
+  movables.push(newB)
+  renderables.unshift(newB)
+  dbg('Boundary añadido', newB)
+
+  collisionMode.start = collisionMode.currentRect = null
+  document.getElementById('collisionMsg').textContent =
+    'Límites definidos correctamente'
+})
