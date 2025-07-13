@@ -1,12 +1,13 @@
 const canvas = document.querySelector('canvas')
 const c = canvas.getContext('2d')
 const delBtn = document.getElementById('deleteObjectBtn')
+const delColBtn = document.getElementById('deleteCollisionBtn')
 
 canvas.width = 350
 canvas.height = 350
 
 // ------------- DEBUG -----------------------------------------------
-const DEBUG = true // ← pon false en producción
+const DEBUG = false // ← pon false en producción
 function dbg(...args) {
   if (DEBUG) console.log('[DBG]', ...args)
 }
@@ -175,6 +176,36 @@ const keys = {
 const movables = [background]
 const renderables = [background, player]
 
+function updateFloatingButtons() {
+  // ----- objeto ------------------------------------------------------------
+  if (delBtn.style.display !== 'none') {
+    const idx = Number(delBtn.dataset.idx)
+    const o = objectMode.placed[idx]
+    if (o) {
+      const x = o.sprite.position.x + o.sprite.width - 8
+      const y = o.sprite.position.y - 8
+      delBtn.style.left = `${x}px`
+      delBtn.style.top = `${y}px`
+    } else {
+      delBtn.style.display = 'none'
+    }
+  }
+
+  // ----- colisión ----------------------------------------------------------
+  if (delColBtn.style.display !== 'none') {
+    const idx = Number(delColBtn.dataset.idx)
+    const b = boundaries[idx]
+    if (b) {
+      const x = b.position.x + b.width - 8
+      const y = b.position.y - 8
+      delColBtn.style.left = `${x}px`
+      delColBtn.style.top = `${y}px`
+    } else {
+      delColBtn.style.display = 'none'
+    }
+  }
+}
+
 let frameCount = 0
 function animate() {
   const animationId = window.requestAnimationFrame(animate)
@@ -246,6 +277,9 @@ function animate() {
       c.strokeRect(r.x, r.y, r.w, r.h)
     }
   }
+
+  // 2 · reposicionar botones flotantes
+  updateFloatingButtons()
 
   player.animate = false
 
@@ -442,6 +476,7 @@ document.getElementById('collisionToggle').addEventListener('change', (e) => {
   document.getElementById('collisionMsg').textContent = collisionMode.active
     ? 'Modo colisiones ACTIVADO'
     : ''
+  if (!collisionMode.active) delColBtn.style.display = 'none'
 })
 
 document.getElementById('saveBounds').addEventListener('click', () => {
@@ -486,6 +521,7 @@ canvas.addEventListener('mousedown', (e) => {
   // Modo colisiones
   if (!collisionMode.active) return
   collisionMode.start = pos
+  delColBtn.style.display = 'none'
   dbg('Start rect', collisionMode.start)
 })
 
@@ -500,7 +536,7 @@ canvas.addEventListener('mousemove', (e) => {
     o.y = pos.y - objectMode.offsetDrag.y - background.position.y
     o.sprite.position.x = o.x
     o.sprite.position.y = o.y
-    delBtn.style.display = 'none'   // ocultar mientras se arrastra
+    delBtn.style.display = 'none' // ocultar mientras se arrastra
     return
   }
 
@@ -510,23 +546,57 @@ canvas.addEventListener('mousemove', (e) => {
     for (let i = objectMode.placed.length - 1; i >= 0; i--) {
       const o = objectMode.placed[i]
       const r = {
-        x: o.x + background.position.x,
-        y: o.y + background.position.y,
+        x: o.sprite.position.x,
+        y: o.sprite.position.y,
         w: o.sprite.width,
         h: o.sprite.height
       }
-      if (pos.x >= r.x && pos.x <= r.x + r.w &&
-          pos.y >= r.y && pos.y <= r.y + r.h) {
+      if (
+        pos.x >= r.x &&
+        pos.x <= r.x + r.w &&
+        pos.y >= r.y &&
+        pos.y <= r.y + r.h
+      ) {
         hoveredId = i
         // posiciona la "X" en la esquina superior-derecha del sprite
         delBtn.style.left = `${r.x + r.w - 8}px`
-        delBtn.style.top  = `${r.y - 8}px`
+        delBtn.style.top = `${r.y - 8}px`
         delBtn.style.display = 'block'
-        delBtn.dataset.idx = i        // guarda a quién borrar
+        delBtn.dataset.idx = i // guarda a quién borrar
         break
       }
     }
     if (hoveredId === null) delBtn.style.display = 'none'
+  }
+
+  // ── Hover para botón "X" de colisiones ──────────────────────────────
+  if (collisionMode.active && !collisionMode.start) {
+    // no dibujando
+    let hovered = null
+    for (let i = boundaries.length - 1; i >= 0; i--) {
+      // de arriba a abajo
+      const b = boundaries[i] // Boundary instance
+      const r = {
+        x: b.position.x,
+        y: b.position.y,
+        w: b.width,
+        h: b.height
+      }
+      if (
+        pos.x >= r.x &&
+        pos.x <= r.x + r.w &&
+        pos.y >= r.y &&
+        pos.y <= r.y + r.h
+      ) {
+        hovered = i
+        delColBtn.style.left = `${r.x + r.w - 8}px`
+        delColBtn.style.top = `${r.y - 8}px`
+        delColBtn.style.display = 'block'
+        delColBtn.dataset.idx = i
+        break
+      }
+    }
+    if (hovered === null) delColBtn.style.display = 'none'
   }
 
   // Modo colisiones
@@ -585,6 +655,25 @@ delBtn.addEventListener('click', () => {
 
   delBtn.style.display = 'none'
   dbg('🗑️ Objeto eliminado', idx)
+})
+
+// ── Click en la "X" para eliminar colisión ──────────────────────────────────
+delColBtn.addEventListener('click', () => {
+  const idx = Number(delColBtn.dataset.idx)
+  const boundarySprite = boundaries[idx]
+  if (!boundarySprite) return
+
+  // 1 · quitar del array boundaries y de movables/renderables
+  boundaries.splice(idx, 1)
+  movables.splice(movables.indexOf(boundarySprite), 1)
+  renderables.splice(renderables.indexOf(boundarySprite), 1)
+
+  // 2 · quitar del array de datos persistentes
+  collisionMode.rectangles.splice(idx, 1)
+
+  // 3 · ocultar botón y refrescar
+  delColBtn.style.display = 'none'
+  dbg('🗑️ Colisión eliminada', idx)
 })
 
 // Poblar la lista de miniaturas
