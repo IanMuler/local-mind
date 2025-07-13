@@ -12,7 +12,7 @@
     }
 
     body {
-      background-color: black;
+      background-color: #7d4521;
       margin: 0;
       padding: 0;
       display: flex;
@@ -35,27 +35,64 @@
       background-color: #ddd;
     }
 
-    .switch{position:relative;display:inline-block;width:50px;height:24px;margin-right:8px;}
-    .switch input{opacity:0;width:0;height:0;}
-    .slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;
-            background:#ccc;transition:.2s;border-radius:24px;}
-    .slider:before{position:absolute;content:'';height:18px;width:18px;left:3px;bottom:3px;
-                   background:white;transition:.2s;border-radius:50%;}
-    input:checked + .slider{background:#66bb6a;}
-    input:checked + .slider:before{transform:translateX(26px);}
-    .msg{font-family:'Press Start 2P',sans-serif;font-size:10px;margin-left:12px;color:#ffd54f;}
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 50px;
+      height: 24px;
+      margin-right: 8px;
+    }
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: #ccc;
+      transition: 0.2s;
+      border-radius: 24px;
+    }
+    .slider:before {
+      position: absolute;
+      content: '';
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background: white;
+      transition: 0.2s;
+      border-radius: 50%;
+    }
+    input:checked + .slider {
+      background: #66bb6a;
+    }
+    input:checked + .slider:before {
+      transform: translateX(26px);
+    }
+    .msg {
+      font-family: 'Press Start 2P', sans-serif;
+      font-size: 10px;
+      margin-left: 12px;
+      color: #ffd54f;
+    }
   </style>
 </head>
 
 <div style="display: inline-block; position: relative">
-  <canvas width="700" height="700" style="width: 700px; height: 700px;"></canvas>
+  <canvas width="700" height="700" style="width: 700px; height: 700px"></canvas>
 </div>
 
 <!-- Collision Mode UI -->
-<div style="margin-top: 10px; text-align: center;">
+<div style="margin-top: 10px; text-align: center">
   <!-- Toggle -->
   <label class="switch">
-    <input type="checkbox" id="collisionToggle">
+    <input type="checkbox" id="collisionToggle" />
     <span class="slider round"></span>
   </label>
 
@@ -65,6 +102,48 @@
   <!-- Feedback -->
   <span id="collisionMsg" class="msg"></span>
 </div>
+
+<!-- Object-mode toggle always visible -->
+<label
+  class="switch"
+  style="position: absolute; left: 140px; top: 6px; z-index: 1000"
+>
+  <input type="checkbox" id="objectToggle" />
+  <span class="slider round"></span>
+</label>
+<span
+  id="objectMsg"
+  class="msg"
+  style="position: absolute; left: 175px; top: 10px; z-index: 1000"
+></span>
+
+<!-- Object Mode UI -->
+<div
+  id="objectPanel"
+  style="
+    display: none;
+    position: absolute;
+    left: 0;
+    top: 32px;
+    bottom: 0;
+    width: 128px;
+    background: #111;
+    padding: 6px 4px 8px 4px;
+    overflow-y: auto;
+    z-index: 999;
+  "
+>
+  <!-- Lista de miniaturas -->
+  <div
+    id="objectList"
+    style="margin: 6px 0; display: grid; grid-template-columns: 1fr; gap: 4px"
+  ></div>
+
+  <!-- Acciones -->
+  <button id="addObject" disabled>Añadir</button>
+  <button id="saveObjects">Guardar</button>
+</div>
+
 <script src="js/utils.js"></script>
 <script src="classes.js"></script>
 <script src="index.js"></script>

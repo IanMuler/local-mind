@@ -49,10 +49,35 @@ if (stored) {
   }
 }
 
+// --- Modo objetos ------------------------------------------------------------
+const objectMode = {
+  active: false,
+  palette: [
+    // añade aquí los PNG que pongas en img/objetos
+    'img/objetos/Piano.png'
+  ],
+  selectedIdx: null, // índice en palette
+  selectedId: null, // índice del objeto seleccionado para flechas
+  draggingId: null, // índice en placed[]
+  offsetDrag: { x: 0, y: 0 },
+  placed: [] // {src, x, y, sprite}  (x,y en coordenadas mundo)
+}
+
+// Cargar objetos guardados
+const storedObjs = localStorage.getItem('lm-objects')
+if (storedObjs) {
+  try {
+    objectMode.placed = JSON.parse(storedObjs)
+    dbg(`🗂️ Objetos cargados ${objectMode.placed.length}`)
+  } catch (e) {
+    objectMode.placed = []
+  }
+}
+
 const boundaries = []
 
 const image = new Image()
-image.src = './img/DptoMap.png'
+image.src = './img/DptoMap.jpg'
 
 const playerDownImage = new Image()
 playerDownImage.src = './img/Yo/playerDown.png'
@@ -115,7 +140,20 @@ image.addEventListener('load', () => {
   movables.push(...boundaries) // para que se muevan con el mapa
   renderables.unshift(...boundaries) // para que se dibujen debajo del player
 
+  // Sprites de objetos persistentes
+  objectMode.placed.forEach((o) => {
+    const s = new Sprite({
+      position: { x: o.x, y: o.y },
+      image: { src: o.src },
+      scale: 1
+    })
+    o.sprite = s
+    movables.push(s)
+    renderables.push(s) // dibuja encima de boundaries
+  })
+
   dbg(`Boundaries iniciales creados: ${boundaries.length}`)
+  dbg(`Objetos iniciales creados: ${objectMode.placed.length}`)
   animate()
 })
 
@@ -137,10 +175,30 @@ const keys = {
 const movables = [background]
 const renderables = [background, player]
 
+let frameCount = 0
 function animate() {
   const animationId = window.requestAnimationFrame(animate)
-  renderables.forEach((renderable) => {
+  frameCount++
+
+  // Log cada 30 frames (aprox 2 veces por segundo)
+  if (DEBUG && frameCount % 30 === 0) {
+    dbg('🌀 Frame', frameCount, '-', renderables.length, 'sprites en escena')
+  }
+
+  renderables.forEach((renderable, index) => {
     renderable.draw()
+
+    // Log objetos solo ocasionalmente para no saturar
+    if (
+      DEBUG &&
+      frameCount % 60 === 0 &&
+      index < 3 &&
+      renderable.image &&
+      renderable.image.src &&
+      renderable.image.src.includes('objetos')
+    ) {
+      dbg('   ↳ dibujando objeto', renderable.image.src, renderable.position)
+    }
   })
 
   // --- Debug: visualizar foot collision box -----------------------------------------
@@ -152,7 +210,11 @@ function animate() {
   }
 
   // --- Pinta rectángulos de colisión -------------------------------------------------
-  if (DEBUG ? (collisionMode.active || collisionMode.rectangles.length) : collisionMode.active) {
+  if (
+    DEBUG
+      ? collisionMode.active || collisionMode.rectangles.length
+      : collisionMode.active
+  ) {
     c.strokeStyle = 'yellow'
     c.lineWidth = 2
 
@@ -302,6 +364,39 @@ window.addEventListener('keydown', (e) => {
       lastKey = 'd'
       break
   }
+
+  // Mover objeto seleccionado con flechas
+  if (
+    objectMode.active &&
+    objectMode.draggingId == null &&
+    objectMode.selectedId !== null
+  ) {
+    const sel = objectMode.placed[objectMode.selectedId]
+    if (!sel) return
+    switch (e.key) {
+      case 'ArrowUp':
+        sel.y -= 4
+        e.preventDefault()
+        break
+      case 'ArrowDown':
+        sel.y += 4
+        e.preventDefault()
+        break
+      case 'ArrowLeft':
+        sel.x -= 4
+        e.preventDefault()
+        break
+      case 'ArrowRight':
+        sel.x += 4
+        e.preventDefault()
+        break
+      default:
+        return
+    }
+    sel.sprite.position.x = sel.x
+    sel.sprite.position.y = sel.y
+    dbg('Arrow move', { key: e.key, x: sel.x, y: sel.y })
+  }
 })
 
 window.addEventListener('keyup', (e) => {
@@ -348,23 +443,74 @@ document.getElementById('saveBounds').addEventListener('click', () => {
 })
 
 canvas.addEventListener('mousedown', (e) => {
+  const pos = getCanvasPos(e)
+
+  // Modo objetos
+  if (objectMode.active) {
+    // ¿click sobre algún objeto?
+    for (let i = objectMode.placed.length - 1; i >= 0; i--) {
+      // arriba primero
+      const o = objectMode.placed[i]
+      const r = {
+        x: o.x + background.position.x,
+        y: o.y + background.position.y,
+        w: o.sprite.width,
+        h: o.sprite.height
+      }
+      if (
+        pos.x >= r.x &&
+        pos.x <= r.x + r.w &&
+        pos.y >= r.y &&
+        pos.y <= r.y + r.h
+      ) {
+        objectMode.draggingId = i
+        objectMode.selectedId = i // para mover con flechas
+        objectMode.offsetDrag = { x: pos.x - r.x, y: pos.y - r.y }
+        dbg('Drag object', i)
+        break
+      }
+    }
+    return
+  }
+
+  // Modo colisiones
   if (!collisionMode.active) return
-  collisionMode.start = getCanvasPos(e)
+  collisionMode.start = pos
   dbg('Start rect', collisionMode.start)
 })
 
 canvas.addEventListener('mousemove', (e) => {
+  const pos = getCanvasPos(e)
+
+  // Modo objetos
+  if (objectMode.active && objectMode.draggingId !== null) {
+    const o = objectMode.placed[objectMode.draggingId]
+    // nuevas coords mundo
+    o.x = pos.x - objectMode.offsetDrag.x - background.position.x
+    o.y = pos.y - objectMode.offsetDrag.y - background.position.y
+    o.sprite.position.x = o.x
+    o.sprite.position.y = o.y
+    return
+  }
+
+  // Modo colisiones
   if (!collisionMode.active || !collisionMode.start) return
-  const now = getCanvasPos(e)
   collisionMode.currentRect = {
-    x: Math.min(collisionMode.start.x, now.x),
-    y: Math.min(collisionMode.start.y, now.y),
-    w: Math.abs(now.x - collisionMode.start.x),
-    h: Math.abs(now.y - collisionMode.start.y)
+    x: Math.min(collisionMode.start.x, pos.x),
+    y: Math.min(collisionMode.start.y, pos.y),
+    w: Math.abs(pos.x - collisionMode.start.x),
+    h: Math.abs(pos.y - collisionMode.start.y)
   }
 })
 
 canvas.addEventListener('mouseup', (e) => {
+  // Modo objetos
+  if (objectMode.active) {
+    objectMode.draggingId = null
+    return
+  }
+
+  // Modo colisiones
   if (!collisionMode.active || !collisionMode.start) return
   if (!collisionMode.currentRect) return
 
@@ -388,4 +534,106 @@ canvas.addEventListener('mouseup', (e) => {
   collisionMode.start = collisionMode.currentRect = null
   document.getElementById('collisionMsg').textContent =
     'Límites definidos correctamente'
+})
+
+// Poblar la lista de miniaturas
+const listEl = document.getElementById('objectList')
+objectMode.palette.forEach((src, i) => {
+  const img = new Image()
+  img.src = src
+  img.style.width = '100%'
+  img.style.cursor = 'pointer'
+  img.addEventListener('click', () => {
+    objectMode.selectedIdx = i
+    dbg('🎯 Objeto seleccionado en paleta:', src, 'idx:', i)
+    // resalta el seleccionado
+    ;[...listEl.children].forEach((ch) => (ch.style.outline = ''))
+    img.style.outline = '2px solid white'
+    document.getElementById('addObject').disabled = false
+    dbg('🔓 Botón "Añadir" habilitado')
+  })
+  listEl.appendChild(img)
+})
+
+// Toggle y botones
+document.getElementById('objectToggle').addEventListener('change', (e) => {
+  objectMode.active = e.target.checked
+  document.getElementById('objectPanel').style.display = objectMode.active
+    ? 'block'
+    : 'none'
+  document.getElementById('objectMsg').textContent = objectMode.active
+    ? 'Modo objetos ACTIVADO'
+    : ''
+
+  // Reiniciar UI al salir del modo
+  if (!objectMode.active) {
+    document.getElementById('addObject').disabled = true
+    objectMode.selectedIdx = null
+    objectMode.selectedId = null
+    const listEl = document.getElementById('objectList')
+    ;[...listEl.children].forEach((ch) => (ch.style.outline = ''))
+  }
+
+  dbg('Toggle objectMode →', objectMode.active)
+})
+
+document.getElementById('addObject').addEventListener('click', () => {
+  if (objectMode.selectedIdx == null) {
+    dbg('❌ Click en "Añadir" sin objeto seleccionado')
+    return
+  }
+  dbg('✅ Click en "Añadir" con idx', objectMode.selectedIdx)
+  const src = objectMode.palette[objectMode.selectedIdx]
+
+  // 1 · Cargamos dimensiones reales del PNG antes de decidir coord.
+  const imgTmp = new Image()
+  imgTmp.src = src
+  dbg('⏳ Cargando PNG', src)
+
+  imgTmp.onload = () => {
+    dbg('🖼️ PNG cargado', { w: imgTmp.width, h: imgTmp.height })
+
+    // Centro de la viewport → coordenadas mundo
+    let worldX = canvas.width / 2 - background.position.x - imgTmp.width / 2
+    let worldY = canvas.height / 2 - background.position.y - imgTmp.height / 2
+
+    // 2 · Clamp para que quede dentro de los límites del mapa/fondo
+    const maxX = background.image.width - imgTmp.width
+    const maxY = background.image.height - imgTmp.height
+    worldX = Math.max(0, Math.min(worldX, maxX))
+    worldY = Math.max(0, Math.min(worldY, maxY))
+
+    dbg('📐 Coordenadas finales', { worldX, worldY })
+
+    // 3 · Crear sprite ya con sus coords definitivas
+    const s = new Sprite({
+      position: { x: worldX, y: worldY },
+      image: { src },
+      scale: 1
+    })
+    objectMode.placed.push({ src, x: worldX, y: worldY, sprite: s })
+    movables.push(s)
+    renderables.push(s)
+    dbg(
+      '🎨 Sprite creado; movables:',
+      movables.length,
+      'renderables:',
+      renderables.length
+    )
+    dbg('Objeto añadido centrado', { src, x: worldX, y: worldY })
+  }
+
+  imgTmp.onerror = () => dbg('❌ ERROR cargando', src)
+})
+
+document.getElementById('saveObjects').addEventListener('click', () => {
+  // guardamos la posición en coordenadas de mundo
+  const toSave = objectMode.placed.map((o) => ({
+    src: o.src,
+    x: o.sprite.position.x - background.position.x,
+    y: o.sprite.position.y - background.position.y
+  }))
+  localStorage.setItem('lm-objects', JSON.stringify(toSave))
+  document.getElementById('objectMsg').textContent = 'Objetos guardados ✔'
+  dbg('Objetos guardados', toSave.length)
 })
