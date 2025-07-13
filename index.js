@@ -184,6 +184,18 @@ function animate() {
     dbg('🌀 Frame', frameCount, '-', renderables.length, 'sprites en escena')
   }
 
+  // ── ORDEN DE PROFUNDIDAD ───────────────────────────────────────────
+  // 1 · el fondo SIEMPRE primero
+  renderables.sort((a, b) => {
+    if (a === background) return -1
+    if (b === background) return 1
+    // "pie" del sprite (y + alto); si no tiene height usa 0
+    const ay = (a.position?.y || 0) + (a.height || 0)
+    const by = (b.position?.y || 0) + (b.height || 0)
+    return ay - by
+  })
+
+  // 2 · pintar ya en orden correcto
   renderables.forEach((renderable, index) => {
     renderable.draw()
 
