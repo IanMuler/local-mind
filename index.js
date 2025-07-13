@@ -1,5 +1,6 @@
 const canvas = document.querySelector('canvas')
 const c = canvas.getContext('2d')
+const delBtn = document.getElementById('deleteObjectBtn')
 
 canvas.width = 350
 canvas.height = 350
@@ -499,7 +500,33 @@ canvas.addEventListener('mousemove', (e) => {
     o.y = pos.y - objectMode.offsetDrag.y - background.position.y
     o.sprite.position.x = o.x
     o.sprite.position.y = o.y
+    delBtn.style.display = 'none'   // ocultar mientras se arrastra
     return
+  }
+
+  // Hover para botón "X"
+  if (objectMode.active) {
+    let hoveredId = null
+    for (let i = objectMode.placed.length - 1; i >= 0; i--) {
+      const o = objectMode.placed[i]
+      const r = {
+        x: o.x + background.position.x,
+        y: o.y + background.position.y,
+        w: o.sprite.width,
+        h: o.sprite.height
+      }
+      if (pos.x >= r.x && pos.x <= r.x + r.w &&
+          pos.y >= r.y && pos.y <= r.y + r.h) {
+        hoveredId = i
+        // posiciona la "X" en la esquina superior-derecha del sprite
+        delBtn.style.left = `${r.x + r.w - 8}px`
+        delBtn.style.top  = `${r.y - 8}px`
+        delBtn.style.display = 'block'
+        delBtn.dataset.idx = i        // guarda a quién borrar
+        break
+      }
+    }
+    if (hoveredId === null) delBtn.style.display = 'none'
   }
 
   // Modo colisiones
@@ -545,6 +572,21 @@ canvas.addEventListener('mouseup', (e) => {
     'Límites definidos correctamente'
 })
 
+// ── Click en la "X" para eliminar objeto ────────────────────────────────────
+delBtn.addEventListener('click', () => {
+  const idx = Number(delBtn.dataset.idx)
+  const o = objectMode.placed[idx]
+  if (!o) return
+
+  // quitar de arrays
+  objectMode.placed.splice(idx, 1)
+  movables.splice(movables.indexOf(o.sprite), 1)
+  renderables.splice(renderables.indexOf(o.sprite), 1)
+
+  delBtn.style.display = 'none'
+  dbg('🗑️ Objeto eliminado', idx)
+})
+
 // Poblar la lista de miniaturas
 const listEl = document.getElementById('objectList')
 objectMode.palette.forEach((src, i) => {
@@ -581,6 +623,7 @@ document.getElementById('objectToggle').addEventListener('change', (e) => {
     objectMode.selectedId = null
     const listEl = document.getElementById('objectList')
     ;[...listEl.children].forEach((ch) => (ch.style.outline = ''))
+    delBtn.style.display = 'none'
   }
 
   dbg('Toggle objectMode →', objectMode.active)
