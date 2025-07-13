@@ -25,12 +25,12 @@ A 2D RPG adventure game built with vanilla JavaScript and HTML5 Canvas. Explore 
 
 ## 🎯 Controls
 
-| Key | Action |
-|-----|--------|
-| **W** | Move Up |
-| **A** | Move Left |
-| **S** | Move Down |
-| **D** | Move Right |
+| Key          | Action                                |
+| ------------ | ------------------------------------- |
+| **W**        | Move Up                               |
+| **A**        | Move Left                             |
+| **S**        | Move Down                             |
+| **D**        | Move Right                            |
 | **Spacebar** | Interact with NPCs / Advance dialogue |
 
 ## 🏗️ Project Structure
@@ -59,7 +59,7 @@ LocalMind/
 
 ### Core Architecture
 
-- **Canvas Rendering**: Fixed 700x700 pixel canvas with 2D context
+- **Canvas Rendering**: Fixed 350x350 pixel canvas with 2D context
 - **Collision System**: JSON-based collision map with pixel-perfect detection
 - **Sprite Animation**: Directional player sprites with smooth transitions
 - **Game Loop**: RequestAnimationFrame-based rendering loop
@@ -67,7 +67,7 @@ LocalMind/
 ### Key Classes
 
 - **Sprite**: Base rendering class with animation frame support
-- **Boundary**: Collision detection rectangles for map boundaries  
+- **Boundary**: Collision detection rectangles for map boundaries
 - **Character**: NPCs with dialogue systems
 
 ### Dependencies
@@ -108,4 +108,4 @@ Contributions are welcome! Feel free to submit issues and enhancement requests.
 
 ---
 
-*Built with ❤️ using vanilla JavaScript and HTML5 Canvas*
+_Built with ❤️ using vanilla JavaScript and HTML5 Canvas_

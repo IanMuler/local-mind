@@ -1,11 +1,11 @@
 const canvas = document.querySelector('canvas')
 const c = canvas.getContext('2d')
 
-canvas.width = 700
-canvas.height = 700
+canvas.width = 350
+canvas.height = 350
 
 // ------------- DEBUG -----------------------------------------------
-const DEBUG = false // ← pon false en producción
+const DEBUG = true // ← pon false en producción
 function dbg(...args) {
   if (DEBUG) console.log('[DBG]', ...args)
 }
@@ -144,8 +144,7 @@ image.addEventListener('load', () => {
   objectMode.placed.forEach((o) => {
     const s = new Sprite({
       position: { x: o.x, y: o.y },
-      image: { src: o.src },
-      scale: 1
+      image: { src: o.src }
     })
     o.sprite = s
     movables.push(s)
@@ -241,7 +240,7 @@ function animate() {
     player.animate = true
     player.image.src = player.sprites.up.src
 
-    const predicted = 6 // velocidad
+    const predicted = 3 // velocidad
 
     // ¿chocaría con alguno?
     let collision = false
@@ -267,7 +266,7 @@ function animate() {
     player.animate = true
     player.image.src = player.sprites.left.src
 
-    const predicted = 6 // velocidad
+    const predicted = 3 // velocidad
 
     // ¿chocaría con alguno?
     let collision = false
@@ -293,7 +292,7 @@ function animate() {
     player.animate = true
     player.image.src = player.sprites.down.src
 
-    const predicted = 6 // velocidad
+    const predicted = 3 // velocidad
 
     // ¿chocaría con alguno?
     let collision = false
@@ -319,7 +318,7 @@ function animate() {
     player.animate = true
     player.image.src = player.sprites.right.src
 
-    const predicted = 6 // velocidad
+    const predicted = 3 // velocidad
 
     // ¿chocaría con alguno?
     let collision = false
@@ -418,11 +417,9 @@ window.addEventListener('keyup', (e) => {
 
 function getCanvasPos(e) {
   const r = canvas.getBoundingClientRect()
-  const scaleX = canvas.width / r.width // factor de escala horizontal
-  const scaleY = canvas.height / r.height // factor vertical
   return {
-    x: (e.clientX - r.left) * scaleX,
-    y: (e.clientY - r.top) * scaleY
+    x: e.clientX - r.left,
+    y: e.clientY - r.top
   }
 }
 
@@ -608,8 +605,7 @@ document.getElementById('addObject').addEventListener('click', () => {
     // 3 · Crear sprite ya con sus coords definitivas
     const s = new Sprite({
       position: { x: worldX, y: worldY },
-      image: { src },
-      scale: 1
+      image: { src }
     })
     objectMode.placed.push({ src, x: worldX, y: worldY, sprite: s })
     movables.push(s)
