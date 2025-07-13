@@ -1,161 +1,62 @@
+<!DOCTYPE html>
+<html lang="es">
 <head>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
-    rel="stylesheet"
-  />
-  <style>
-    * {
-      font-family: 'Press Start 2P', cursive;
-      box-sizing: border-box;
-    }
-
-    body {
-      background-color: #7d4521;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-    }
-
-    h1 {
-      margin: 0;
-    }
-
-    button {
-      border: 0;
-      cursor: pointer;
-      font-size: 16px;
-    }
-
-    button:hover {
-      background-color: #ddd;
-    }
-
-    .switch {
-      position: relative;
-      display: inline-block;
-      width: 50px;
-      height: 24px;
-      margin-right: 8px;
-    }
-    .switch input {
-      opacity: 0;
-      width: 0;
-      height: 0;
-    }
-    .slider {
-      position: absolute;
-      cursor: pointer;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: #ccc;
-      transition: 0.2s;
-      border-radius: 24px;
-    }
-    .slider:before {
-      position: absolute;
-      content: '';
-      height: 18px;
-      width: 18px;
-      left: 3px;
-      bottom: 3px;
-      background: white;
-      transition: 0.2s;
-      border-radius: 50%;
-    }
-    input:checked + .slider {
-      background: #66bb6a;
-    }
-    input:checked + .slider:before {
-      transform: translateX(26px);
-    }
-    .msg {
-      font-family: 'Press Start 2P', sans-serif;
-      font-size: 10px;
-      margin-left: 12px;
-      color: #ffd54f;
-    }
-  </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LocalMind - RPG Game</title>
+  
+  <!-- Preload font for better performance -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  
+  <!-- Main CSS -->
+  <link rel="stylesheet" href="src/css/main.css">
 </head>
+<body>
+  <!-- Canvas wrapper with floating buttons -->
+  <div class="canvas-wrapper">
+    <canvas id="gameCanvas" width="350" height="350"></canvas>
 
-<div style="display: inline-block; position: relative">
-  <canvas width="350" height="350" style="width: 350px; height: 350px"></canvas>
-  
-  <!-- Botón flotante para borrar objeto -->
-  <button id="deleteObjectBtn"
-          style="display:none;position:absolute;padding:0 4px;
-                 font-weight:bold;color:#fff;background:#e00;border:none;
-                 border-radius:3px;cursor:pointer;z-index:1001;">×</button>
-  
-  <!-- Botón flotante para borrar colisión -->
-  <button id="deleteCollisionBtn"
-          style="display:none;position:absolute;padding:0 4px;
-                 font-weight:bold;color:#fff;background:#0077ff;border:none;
-                 border-radius:3px;cursor:pointer;z-index:1001;">×</button>
-</div>
+    <!-- Floating delete buttons -->
+    <button id="deleteObjectBtn" class="btn btn--danger btn--floating is-hidden" aria-label="Eliminar objeto">×</button>
+    <button id="deleteCollisionBtn" class="btn btn--info btn--floating is-hidden" aria-label="Eliminar colisión">×</button>
+  </div>
 
-<!-- Collision Mode UI -->
-<div style="margin-top: 10px; text-align: center">
-  <!-- Toggle -->
-  <label class="switch">
-    <input type="checkbox" id="collisionToggle" />
-    <span class="slider round"></span>
+  <!-- Main HUD Controls -->
+  <div class="hud">
+    <!-- Collision Mode Toggle -->
+    <label class="switch" for="collisionToggle">
+      <input type="checkbox" id="collisionToggle" role="switch" aria-label="Activar modo colisiones">
+      <span class="switch__slider"></span>
+      <span class="u-visually-hidden">Modo colisiones</span>
+    </label>
+
+    <button id="saveBounds" class="btn">Guardar</button>
+    <span id="collisionMsg" class="msg" aria-live="polite"></span>
+  </div>
+
+  <!-- Object Mode Toggle (positioned absolutely) -->
+  <label class="switch object-mode-toggle" for="objectToggle">
+    <input type="checkbox" id="objectToggle" role="switch" aria-label="Activar modo objetos">
+    <span class="switch__slider"></span>
+    <span class="u-visually-hidden">Modo objetos</span>
   </label>
+  <span id="objectMsg" class="msg object-mode-msg" aria-live="polite"></span>
 
-  <!-- Botón Guardar -->
-  <button id="saveBounds">Guardar</button>
+  <!-- Object Mode Panel (slides in from left) -->
+  <aside id="objectPanel" class="panel" aria-label="Panel de objetos">
+    <!-- Thumbnail grid -->
+    <div id="objectList" class="thumb-grid"></div>
 
-  <!-- Feedback -->
-  <span id="collisionMsg" class="msg"></span>
-</div>
+    <!-- Actions -->
+    <button id="addObject" class="btn" disabled>Añadir</button>
+    <button id="saveObjects" class="btn">Guardar</button>
+  </aside>
 
-<!-- Object-mode toggle always visible -->
-<label
-  class="switch"
-  style="position: absolute; left: 140px; top: 6px; z-index: 1000"
->
-  <input type="checkbox" id="objectToggle" />
-  <span class="slider round"></span>
-</label>
-<span
-  id="objectMsg"
-  class="msg"
-  style="position: absolute; left: 175px; top: 10px; z-index: 1000"
-></span>
-
-<!-- Object Mode UI -->
-<div
-  id="objectPanel"
-  style="
-    display: none;
-    position: absolute;
-    left: 0;
-    top: 32px;
-    bottom: 0;
-    width: 128px;
-    background: #111;
-    padding: 6px 4px 8px 4px;
-    overflow-y: auto;
-    z-index: 999;
-  "
->
-  <!-- Lista de miniaturas -->
-  <div
-    id="objectList"
-    style="margin: 6px 0; display: grid; grid-template-columns: 1fr; gap: 4px"
-  ></div>
-
-  <!-- Acciones -->
-  <button id="addObject" disabled>Añadir</button>
-  <button id="saveObjects">Guardar</button>
-</div>
-
-<script src="js/utils.js"></script>
-<script src="classes.js"></script>
-<script src="index.js"></script>
+  <!-- Scripts -->
+  <script src="src/js/utils.js"></script>
+  <script src="src/js/classes.js"></script>
+  <script src="src/js/index.js"></script>
+</body>
+</html>

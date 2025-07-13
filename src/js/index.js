@@ -1,4 +1,4 @@
-const canvas = document.querySelector('canvas')
+const canvas = document.getElementById('gameCanvas')
 const c = canvas.getContext('2d')
 const delBtn = document.getElementById('deleteObjectBtn')
 const delColBtn = document.getElementById('deleteCollisionBtn')
@@ -10,6 +10,19 @@ canvas.height = 350
 const DEBUG = false // ← pon false en producción
 function dbg(...args) {
   if (DEBUG) console.log('[DBG]', ...args)
+}
+
+// ------------- CSS HELPERS -----------------------------------------------
+function showElement(element) {
+  element.classList.remove('is-hidden')
+}
+
+function hideElement(element) {
+  element.classList.add('is-hidden')
+}
+
+function isElementHidden(element) {
+  return element.classList.contains('is-hidden')
 }
 
 // ------------- COLLISION DETECTION ------------------------------------
@@ -178,7 +191,7 @@ const renderables = [background, player]
 
 function updateFloatingButtons() {
   // ----- objeto ------------------------------------------------------------
-  if (delBtn.style.display !== 'none') {
+  if (!isElementHidden(delBtn)) {
     const idx = Number(delBtn.dataset.idx)
     const o = objectMode.placed[idx]
     if (o) {
@@ -187,12 +200,12 @@ function updateFloatingButtons() {
       delBtn.style.left = `${x}px`
       delBtn.style.top = `${y}px`
     } else {
-      delBtn.style.display = 'none'
+      hideElement(delBtn)
     }
   }
 
   // ----- colisión ----------------------------------------------------------
-  if (delColBtn.style.display !== 'none') {
+  if (!isElementHidden(delColBtn)) {
     const idx = Number(delColBtn.dataset.idx)
     const b = boundaries[idx]
     if (b) {
@@ -201,7 +214,7 @@ function updateFloatingButtons() {
       delColBtn.style.left = `${x}px`
       delColBtn.style.top = `${y}px`
     } else {
-      delColBtn.style.display = 'none'
+      hideElement(delColBtn)
     }
   }
 }
@@ -476,7 +489,7 @@ document.getElementById('collisionToggle').addEventListener('change', (e) => {
   document.getElementById('collisionMsg').textContent = collisionMode.active
     ? 'Modo colisiones ACTIVADO'
     : ''
-  if (!collisionMode.active) delColBtn.style.display = 'none'
+  if (!collisionMode.active) hideElement(delColBtn)
 })
 
 document.getElementById('saveBounds').addEventListener('click', () => {
@@ -521,7 +534,7 @@ canvas.addEventListener('mousedown', (e) => {
   // Modo colisiones
   if (!collisionMode.active) return
   collisionMode.start = pos
-  delColBtn.style.display = 'none'
+  hideElement(delColBtn)
   dbg('Start rect', collisionMode.start)
 })
 
@@ -536,7 +549,7 @@ canvas.addEventListener('mousemove', (e) => {
     o.y = pos.y - objectMode.offsetDrag.y - background.position.y
     o.sprite.position.x = o.x
     o.sprite.position.y = o.y
-    delBtn.style.display = 'none' // ocultar mientras se arrastra
+    hideElement(delBtn) // ocultar mientras se arrastra
     return
   }
 
@@ -561,12 +574,12 @@ canvas.addEventListener('mousemove', (e) => {
         // posiciona la "X" en la esquina superior-derecha del sprite
         delBtn.style.left = `${r.x + r.w - 8}px`
         delBtn.style.top = `${r.y - 8}px`
-        delBtn.style.display = 'block'
+        showElement(delBtn)
         delBtn.dataset.idx = i // guarda a quién borrar
         break
       }
     }
-    if (hoveredId === null) delBtn.style.display = 'none'
+    if (hoveredId === null) hideElement(delBtn)
   }
 
   // ── Hover para botón "X" de colisiones ──────────────────────────────
@@ -591,12 +604,12 @@ canvas.addEventListener('mousemove', (e) => {
         hovered = i
         delColBtn.style.left = `${r.x + r.w - 8}px`
         delColBtn.style.top = `${r.y - 8}px`
-        delColBtn.style.display = 'block'
+        showElement(delColBtn)
         delColBtn.dataset.idx = i
         break
       }
     }
-    if (hovered === null) delColBtn.style.display = 'none'
+    if (hovered === null) hideElement(delColBtn)
   }
 
   // Modo colisiones
@@ -672,7 +685,7 @@ delColBtn.addEventListener('click', () => {
   collisionMode.rectangles.splice(idx, 1)
 
   // 3 · ocultar botón y refrescar
-  delColBtn.style.display = 'none'
+  hideElement(delColBtn)
   dbg('🗑️ Colisión eliminada', idx)
 })
 
@@ -681,14 +694,13 @@ const listEl = document.getElementById('objectList')
 objectMode.palette.forEach((src, i) => {
   const img = new Image()
   img.src = src
-  img.style.width = '100%'
-  img.style.cursor = 'pointer'
+  img.alt = `Objeto ${i + 1}: ${src.split('/').pop().replace('.png', '')}`
   img.addEventListener('click', () => {
     objectMode.selectedIdx = i
     dbg('🎯 Objeto seleccionado en paleta:', src, 'idx:', i)
     // resalta el seleccionado
-    ;[...listEl.children].forEach((ch) => (ch.style.outline = ''))
-    img.style.outline = '2px solid white'
+    ;[...listEl.children].forEach((ch) => ch.classList.remove('is-selected'))
+    img.classList.add('is-selected')
     document.getElementById('addObject').disabled = false
     dbg('🔓 Botón "Añadir" habilitado')
   })
@@ -698,9 +710,12 @@ objectMode.palette.forEach((src, i) => {
 // Toggle y botones
 document.getElementById('objectToggle').addEventListener('change', (e) => {
   objectMode.active = e.target.checked
-  document.getElementById('objectPanel').style.display = objectMode.active
-    ? 'block'
-    : 'none'
+  const objectPanel = document.getElementById('objectPanel')
+  if (objectMode.active) {
+    objectPanel.classList.add('is-open')
+  } else {
+    objectPanel.classList.remove('is-open')
+  }
   document.getElementById('objectMsg').textContent = objectMode.active
     ? 'Modo objetos ACTIVADO'
     : ''
@@ -711,8 +726,8 @@ document.getElementById('objectToggle').addEventListener('change', (e) => {
     objectMode.selectedIdx = null
     objectMode.selectedId = null
     const listEl = document.getElementById('objectList')
-    ;[...listEl.children].forEach((ch) => (ch.style.outline = ''))
-    delBtn.style.display = 'none'
+    ;[...listEl.children].forEach((ch) => ch.classList.remove('is-selected'))
+    hideElement(delBtn)
   }
 
   dbg('Toggle objectMode →', objectMode.active)
