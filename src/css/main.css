@@ -27,6 +27,8 @@ canvas {
   --radius: 4px;
   --font-ui: 'Press Start 2P', monospace;
   --transition: 0.2s ease-in-out;
+  --panel-w: 220px;           /* ancho base escritorio  */
+  --thumb-size: 64px;         /* miniatura cuadrada     */
 }
 
 /* ==================================================
@@ -58,27 +60,25 @@ canvas {
   display: inline-block;
 }
 
-.hud {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  text-align: center;
-  margin-top: 10px;
-}
+
+/* ==================================================
+   3. Layout  –– PANEL OBJETOS MEJORADO
+   ================================================== */
 
 .panel {
-  position: absolute;
+  position: fixed;       /* ➜ independiente del canvas            */
   left: 0;
-  top: 32px;
+  top: 0;
   bottom: 0;
-  width: 128px;
-  padding: 6px 4px 8px 4px;
-  background: var(--clr-dark);
+  width: var(--panel-w);
+  padding: 12px 10px 16px;
+  background: #111;
   overflow-y: auto;
   z-index: 999;
   transform: translateX(-100%);
-  transition: transform var(--transition);
+  transition: transform .25s cubic-bezier(.22,.61,.36,1);
   pointer-events: none;
+  border-right: 1px solid #222;
 }
 
 .panel.is-open {
@@ -86,24 +86,63 @@ canvas {
   pointer-events: auto;
 }
 
-/* grid de miniaturas dentro del panel */
+/* GRID de miniaturas */
 .thumb-grid {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 4px;
-  margin: 6px 0;
+  grid-template-columns: repeat(auto-fill, minmax(var(--thumb-size), 1fr));
+  gap: 8px;
 }
 
 .thumb-grid img {
   width: 100%;
+  aspect-ratio: 1/1;          /* asegura cuadrado */
+  object-fit: contain;
+  border-radius: 6px;
+  background: #222;
   cursor: pointer;
-  outline: none;
-  transition: outline var(--transition);
+  opacity: 0;                 /* aparecerá con fade-in */
+  transition:
+    outline .2s ease,
+    box-shadow .2s ease,
+    transform .15s ease,
+    opacity .4s ease;
 }
 
-.thumb-grid img:hover,
+.thumb-grid img.loaded {      /* se aplica en JS onload */
+  opacity: 1;
+}
+
+.thumb-grid img:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 4px 2px #ffd54f66;
+}
+
 .thumb-grid img.is-selected {
-  outline: 2px solid white;
+  outline: 3px solid var(--clr-primary);
+}
+
+/* Botones dentro del panel */
+.panel .btn {
+  width: 100%;
+  margin-top: 12px;
+}
+
+/* Scrollbar estética */
+.panel::-webkit-scrollbar {
+  width: 8px;
+}
+
+.panel::-webkit-scrollbar-track {
+  background: #111;
+}
+
+.panel::-webkit-scrollbar-thumb {
+  background: #444;
+  border-radius: 4px;
+}
+
+.panel::-webkit-scrollbar-thumb:hover {
+  background: #666;
 }
 
 /* ==================================================
@@ -229,22 +268,6 @@ canvas {
   outline-offset: 3px;
 }
 
-/* ==================================================
-   5. Object Mode Toggle (positioned absolutely)
-   ================================================== */
-.object-mode-toggle {
-  position: absolute;
-  left: 140px;
-  top: 6px;
-  z-index: 1000;
-}
-
-.object-mode-msg {
-  position: absolute;
-  left: 175px;
-  top: 10px;
-  z-index: 1000;
-}
 
 /* ==================================================
    6. Utilidades
@@ -269,15 +292,21 @@ canvas {
     width: 90vmin;
   }
 
+  /* ➜ bottom sheet móvil */
   .panel {
-    width: 100%;
-  }
-
-  .object-mode-toggle,
-  .object-mode-msg {
-    position: relative;
-    left: auto;
     top: auto;
+    left: 0;
+    right: 0;
+    bottom: -100%;
+    width: 100%;
+    max-height: 50vh;
+    border-right: 0;
+    border-top: 1px solid #222;
+    transform: translateY(0);
+  }
+  
+  .panel.is-open {
+    transform: translateY(-100%);
   }
 }
 
@@ -287,4 +316,109 @@ canvas {
   *::after {
     transition: none !important;
   }
+  
+  .panel,
+  .thumb-grid img,
+  .thumb-grid img:hover {
+    transition: none !important;
+  }
+}
+
+/* ==================================================
+   8. Tools Dropdown - Fixed Bottom Right
+   ================================================== */
+.tools-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  z-index: 1000;
+}
+
+.tools-button {
+  background: #ffffff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 8px;
+  cursor: pointer;
+  transition: background-color .2s;
+}
+
+.tools-button:hover {
+  background: #f0f0f0;
+}
+
+.tool-icon {
+  width: 24px;
+  height: 24px;
+  display: block;
+}
+
+.tools-dropdown {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,.1);
+  padding: 12px;
+  display: none;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 150px;
+}
+
+.tools-dropdown.show {
+  display: flex;
+}
+
+/* Cada item (texto + switch) */
+.tools-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tools-label {
+  font-size: 14px;
+  color: #333;
+  margin-right: 8px;
+}
+
+/* Botón Guardar dentro del dropdown */
+.save-btn {
+  align-self: stretch;
+  margin-top: 8px;
+  padding: 6px;
+  font-size: 14px;
+  border-radius: 6px;
+  background: #007bff;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: background .2s;
+}
+
+.save-btn:hover {
+  background: #0056b3;
+}
+
+/* Messages container */
+.messages-container {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  z-index: 999;
+}
+
+/* Adjust switches in dropdown */
+.tools-dropdown .switch {
+  --w: 48px;
+  --h: 24px;
 }

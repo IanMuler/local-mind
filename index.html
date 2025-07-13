@@ -23,33 +23,62 @@
     <button id="deleteCollisionBtn" class="btn btn--info btn--floating is-hidden" aria-label="Eliminar colisión">×</button>
   </div>
 
-  <!-- Main HUD Controls -->
-  <div class="hud">
-    <!-- Collision Mode Toggle -->
-    <label class="switch" for="collisionToggle">
-      <input type="checkbox" id="collisionToggle" role="switch" aria-label="Activar modo colisiones">
-      <span class="switch__slider"></span>
-      <span class="u-visually-hidden">Modo colisiones</span>
-    </label>
+  <!-- Tools container - fixed bottom right -->
+  <div class="tools-container">
+    <button id="toolsButton"
+            class="btn tools-button"
+            aria-haspopup="true"
+            aria-expanded="false"
+            aria-label="Abrir herramientas">
+      <img src="img/Gear.svg" alt="Herramientas" class="tool-icon">
+    </button>
 
-    <button id="saveBounds" class="btn">Guardar</button>
-    <span id="collisionMsg" class="msg" aria-live="polite"></span>
+    <div id="toolsDropdown"
+         class="tools-dropdown"
+         role="menu"
+         aria-hidden="true">
+      <!-- Item Modo objetos -->
+      <div class="tools-item" role="menuitemcheckbox" aria-checked="false">
+        <span class="tools-label">Modo objetos</span>
+        <label class="switch" for="objectToggle">
+          <input type="checkbox"
+                 id="objectToggle"
+                 role="switch"
+                 aria-label="Activar modo objetos">
+          <span class="switch__slider"></span>
+        </label>
+      </div>
+      
+      <!-- Item Modo colisiones -->
+      <div class="tools-item" role="menuitemcheckbox" aria-checked="false">
+        <span class="tools-label">Modo colisiones</span>
+        <label class="switch" for="collisionToggle">
+          <input type="checkbox"
+                 id="collisionToggle"
+                 role="switch"
+                 aria-label="Activar modo colisiones">
+          <span class="switch__slider"></span>
+        </label>
+      </div>
+      
+      <!-- Guardar (oculto hasta activar algún modo) -->
+      <button id="saveBounds"
+              class="btn save-btn"
+              hidden>
+        Guardar
+      </button>
+    </div>
   </div>
 
-  <!-- Object Mode Toggle (positioned absolutely) -->
-  <label class="switch object-mode-toggle" for="objectToggle">
-    <input type="checkbox" id="objectToggle" role="switch" aria-label="Activar modo objetos">
-    <span class="switch__slider"></span>
-    <span class="u-visually-hidden">Modo objetos</span>
-  </label>
-  <span id="objectMsg" class="msg object-mode-msg" aria-live="polite"></span>
+  <!-- Messages (initially hidden) -->
+  <div id="messagesContainer" class="messages-container is-hidden">
+    <span id="collisionMsg" class="msg" aria-live="polite"></span>
+    <span id="objectMsg" class="msg" aria-live="polite"></span>
+  </div>
 
-  <!-- Object Mode Panel (slides in from left) -->
+  <!-- PANEL OBJETOS -->
   <aside id="objectPanel" class="panel" aria-label="Panel de objetos">
-    <!-- Thumbnail grid -->
     <div id="objectList" class="thumb-grid"></div>
-
-    <!-- Actions -->
     <button id="addObject" class="btn" disabled>Añadir</button>
     <button id="saveObjects" class="btn">Guardar</button>
   </aside>
