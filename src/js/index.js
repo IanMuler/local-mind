@@ -69,7 +69,8 @@ const objectMode = {
   active: false,
   palette: [
     // añade aquí los PNG que pongas en img/objetos
-    'img/objetos/Piano.png'
+    'img/objetos/Piano.png',
+    'img/objetos/Silla.png'
   ],
   selectedIdx: null, // índice en palette
   selectedId: null, // índice del objeto seleccionado para flechas
@@ -690,23 +691,26 @@ delColBtn.addEventListener('click', () => {
 })
 
 // 1· Lazy-loading de miniaturas + fade-in
-const observer = new IntersectionObserver((entries) => {
-  entries.forEach(entry => {
-    if (entry.isIntersecting) {
-      const img = entry.target
-      img.src = img.dataset.src           // carga real
-      observer.unobserve(img)
-    }
-  })
-}, { root: document.getElementById('objectPanel'), threshold: 0.1 })
+const observer = new IntersectionObserver(
+  (entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        const img = entry.target
+        img.src = img.dataset.src // carga real
+        observer.unobserve(img)
+      }
+    })
+  },
+  { root: document.getElementById('objectPanel'), threshold: 0.1 }
+)
 
 // Poblar lista de miniaturas con lazy-load
 const listEl = document.getElementById('objectList')
 objectMode.palette.forEach((src, i) => {
   const img = document.createElement('img')
-  img.dataset.src = src          // diferimos la carga
+  img.dataset.src = src // diferimos la carga
   img.alt = `Objeto ${i + 1}: ${src.split('/').pop().replace('.png', '')}`
-  img.tabIndex = 0               // accesible por teclado
+  img.tabIndex = 0 // accesible por teclado
 
   // al cargar, aplicar fade-in
   img.addEventListener('load', () => img.classList.add('loaded'))
@@ -714,29 +718,29 @@ objectMode.palette.forEach((src, i) => {
   // click o Enter → seleccionar
   function select() {
     objectMode.selectedIdx = i
-    ;[...listEl.children].forEach(ch => ch.classList.remove('is-selected'))
+    ;[...listEl.children].forEach((ch) => ch.classList.remove('is-selected'))
     img.classList.add('is-selected')
     document.getElementById('addObject').disabled = false
   }
   img.addEventListener('click', select)
-  img.addEventListener('keydown', e => {
+  img.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') select()
   })
 
   listEl.appendChild(img)
-  observer.observe(img)          // activar lazy-load
+  observer.observe(img) // activar lazy-load
 })
 
 // Navegación ← → dentro del panel
 const objectPanel = document.getElementById('objectPanel')
-objectPanel.addEventListener('keydown', e => {
+objectPanel.addEventListener('keydown', (e) => {
   if (!['ArrowLeft', 'ArrowRight'].includes(e.key)) return
   const imgs = [...listEl.children]
   let idx = objectMode.selectedIdx ?? -1
   if (e.key === 'ArrowLeft') idx = (idx - 1 + imgs.length) % imgs.length
   if (e.key === 'ArrowRight') idx = (idx + 1) % imgs.length
   imgs[idx].focus()
-  imgs[idx].click()  // reutiliza la lógica de selección
+  imgs[idx].click() // reutiliza la lógica de selección
 })
 
 // Toggle y botones
@@ -842,14 +846,14 @@ toolsButton.addEventListener('click', () => {
 })
 
 // 2) Cerrar al click fuera o teclear Esc
-document.addEventListener('click', e => {
+document.addEventListener('click', (e) => {
   if (!toolsButton.contains(e.target) && !toolsDropdown.contains(e.target)) {
     toolsDropdown.classList.remove('show')
     toolsButton.setAttribute('aria-expanded', 'false')
     toolsDropdown.setAttribute('aria-hidden', 'true')
   }
 })
-document.addEventListener('keydown', e => {
+document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     toolsDropdown.classList.remove('show')
     toolsButton.setAttribute('aria-expanded', 'false')
@@ -861,7 +865,7 @@ document.addEventListener('keydown', e => {
 function updateSaveVisibility() {
   const anyOn = objectToggle.checked || collisionToggle.checked
   saveBtn.hidden = !anyOn
-  
+
   // Show/hide messages container
   if (anyOn) {
     messagesContainer.classList.remove('is-hidden')
@@ -870,10 +874,10 @@ function updateSaveVisibility() {
   }
 }
 
-objectToggle.addEventListener('change', e => {
+objectToggle.addEventListener('change', (e) => {
   updateSaveVisibility()
 })
 
-collisionToggle.addEventListener('change', e => {
+collisionToggle.addEventListener('change', (e) => {
   updateSaveVisibility()
 })
