@@ -70,7 +70,9 @@ const objectMode = {
   palette: [
     // añade aquí los PNG que pongas en img/objetos
     'img/objetos/Piano.png',
-    'img/objetos/Silla.png'
+    'img/objetos/Silla.png',
+    'img/objetos/Escritorio.png',
+    'img/objetos/Monitor.png'
   ],
   selectedIdx: null, // índice en palette
   selectedId: null, // índice del objeto seleccionado para flechas
