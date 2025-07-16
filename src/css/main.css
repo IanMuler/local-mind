@@ -178,6 +178,11 @@ canvas {
   color: #fff;
 }
 
+.btn--secondary {
+  background: #ffd54f;
+  color: #000;
+}
+
 .btn:disabled,
 .btn:disabled:hover {
   filter: none;
@@ -421,4 +426,64 @@ canvas {
 .tools-dropdown .switch {
   --w: 48px;
   --h: 24px;
+}
+
+/* ==================================================
+   9. Modal
+   ================================================== */
+.modal {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1002;
+}
+
+.modal.hidden {
+  display: none;
+}
+
+.modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, .4);
+}
+
+.modal__content {
+  position: relative;
+  padding: 1.5rem 2rem;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, .2);
+  min-width: 240px;
+  text-align: center;
+}
+
+.modal__content h3 {
+  color: #333;
+  margin-bottom: 1rem;
+  font-size: 16px;
+}
+
+.modal__content input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 16px;
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.modal__buttons {
+  margin-top: 1rem;
+  display: flex;
+  gap: .5rem;
+  justify-content: end;
+}
+
+.btn--primary {
+  background: var(--clr-primary);
+  color: #000;
 }

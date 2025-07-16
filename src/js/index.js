@@ -1,6 +1,7 @@
 const canvas = document.getElementById('gameCanvas')
 const c = canvas.getContext('2d')
 const delBtn = document.getElementById('deleteObjectBtn')
+const cfgBtn = document.getElementById('configObjectBtn')
 const delColBtn = document.getElementById('deleteCollisionBtn')
 
 canvas.width = 350
@@ -78,7 +79,7 @@ const objectMode = {
   selectedId: null, // índice del objeto seleccionado para flechas
   draggingId: null, // índice en placed[]
   offsetDrag: { x: 0, y: 0 },
-  placed: [] // {src, x, y, sprite}  (x,y en coordenadas mundo)
+  placed: [] // {src, x, y, nivel, sprite}  (x,y en coordenadas mundo)
 }
 
 // Cargar objetos guardados
@@ -160,10 +161,12 @@ image.addEventListener('load', () => {
 
   // Sprites de objetos persistentes
   objectMode.placed.forEach((o) => {
+    o.nivel = o.nivel ?? 0
     const s = new Sprite({
       position: { x: o.x, y: o.y },
       image: { src: o.src }
     })
+    s.nivel = o.nivel
     o.sprite = s
     movables.push(s)
     renderables.push(s) // dibuja encima de boundaries
@@ -207,6 +210,19 @@ function updateFloatingButtons() {
     }
   }
 
+  if (!isElementHidden(cfgBtn)) {
+    const idx = Number(cfgBtn.dataset.idx)
+    const o = objectMode.placed[idx]
+    if (o) {
+      const x = o.sprite.position.x + o.sprite.width - 8
+      const yCfg = o.sprite.position.y + 10
+      cfgBtn.style.left = `${x}px`
+      cfgBtn.style.top = `${yCfg}px`
+    } else {
+      hideElement(cfgBtn)
+    }
+  }
+
   // ----- colisión ----------------------------------------------------------
   if (!isElementHidden(delColBtn)) {
     const idx = Number(delColBtn.dataset.idx)
@@ -237,6 +253,11 @@ function animate() {
   renderables.sort((a, b) => {
     if (a === background) return -1
     if (b === background) return 1
+
+    const aLvl = a.nivel ?? 0
+    const bLvl = b.nivel ?? 0
+    if (aLvl !== bLvl) return aLvl - bLvl // 0 debajo de 1, 1 debajo de 2…
+
     // "pie" del sprite (y + alto); si no tiene height usa 0
     const ay = (a.position?.y || 0) + (a.height || 0)
     const by = (b.position?.y || 0) + (b.height || 0)
@@ -578,11 +599,21 @@ canvas.addEventListener('mousemove', (e) => {
         delBtn.style.left = `${r.x + r.w - 8}px`
         delBtn.style.top = `${r.y - 8}px`
         showElement(delBtn)
-        delBtn.dataset.idx = i // guarda a quién borrar
+        delBtn.dataset.idx = i
+
+        // posiciona el engranaje más cerca de la X
+        const yCfg = r.y + 10
+        cfgBtn.style.left = `${r.x + r.w - 8}px`
+        cfgBtn.style.top = `${yCfg}px`
+        showElement(cfgBtn)
+        cfgBtn.dataset.idx = i
         break
       }
     }
-    if (hoveredId === null) hideElement(delBtn)
+    if (hoveredId === null) {
+      hideElement(delBtn)
+      hideElement(cfgBtn)
+    }
   }
 
   // ── Hover para botón "X" de colisiones ──────────────────────────────
@@ -669,7 +700,8 @@ delBtn.addEventListener('click', () => {
   movables.splice(movables.indexOf(o.sprite), 1)
   renderables.splice(renderables.indexOf(o.sprite), 1)
 
-  delBtn.style.display = 'none'
+  hideElement(delBtn)
+  hideElement(cfgBtn)
   dbg('🗑️ Objeto eliminado', idx)
 })
 
@@ -766,6 +798,7 @@ document.getElementById('objectToggle').addEventListener('change', (e) => {
     const listEl = document.getElementById('objectList')
     ;[...listEl.children].forEach((ch) => ch.classList.remove('is-selected'))
     hideElement(delBtn)
+    hideElement(cfgBtn)
   }
 
   dbg('Toggle objectMode →', objectMode.active)
@@ -800,11 +833,13 @@ document.getElementById('addObject').addEventListener('click', () => {
     dbg('📐 Coordenadas finales', { worldX, worldY })
 
     // 3 · Crear sprite ya con sus coords definitivas
+    const nivel = 0 // valor por defecto
     const s = new Sprite({
       position: { x: worldX, y: worldY },
       image: { src }
     })
-    objectMode.placed.push({ src, x: worldX, y: worldY, sprite: s })
+    s.nivel = nivel
+    objectMode.placed.push({ src, x: worldX, y: worldY, nivel, sprite: s })
     movables.push(s)
     renderables.push(s)
     dbg(
@@ -824,7 +859,8 @@ document.getElementById('saveObjects').addEventListener('click', () => {
   const toSave = objectMode.placed.map((o) => ({
     src: o.src,
     x: o.sprite.position.x - background.position.x,
-    y: o.sprite.position.y - background.position.y
+    y: o.sprite.position.y - background.position.y,
+    nivel: o.nivel ?? 0
   }))
   localStorage.setItem('lm-objects', JSON.stringify(toSave))
   document.getElementById('objectMsg').textContent = 'Objetos guardados ✔'
@@ -882,4 +918,58 @@ objectToggle.addEventListener('change', (e) => {
 
 collisionToggle.addEventListener('change', (e) => {
   updateSaveVisibility()
+})
+
+// ────────────────────────────────────────────────────────────────────────────
+// MODAL DE CONFIGURACIÓN DE NIVEL
+// ────────────────────────────────────────────────────────────────────────────
+
+const modal = document.getElementById('levelModal')
+const nivelInput = document.getElementById('nivelInput')
+const nivelSave = document.getElementById('nivelSave')
+const nivelCancel = document.getElementById('nivelCancel')
+
+function openModal(idx, valorActual) {
+  modal.dataset.idx = idx
+  nivelInput.value = valorActual ?? 0
+  modal.classList.remove('hidden')
+  nivelInput.focus()
+}
+
+function closeModal() {
+  modal.classList.add('hidden')
+}
+
+// Botón ⚙ (cfgBtn)
+cfgBtn.addEventListener('click', () => {
+  const idx = Number(cfgBtn.dataset.idx)
+  const o = objectMode.placed[idx]
+  if (o) openModal(idx, o.nivel)
+})
+
+// Botones del modal
+nivelSave.addEventListener('click', () => {
+  const idx = Number(modal.dataset.idx)
+  const nuevo = Number(nivelInput.value)
+
+  if (!Number.isNaN(nuevo)) {
+    const o = objectMode.placed[idx]
+    if (o) {
+      o.nivel = nuevo
+      o.sprite.nivel = nuevo
+    }
+  }
+  closeModal()
+})
+
+nivelCancel.addEventListener('click', closeModal)
+
+// Cerrar con ESC o clic fuera
+modal.addEventListener('click', (e) => {
+  if (e.target === modal || e.target.classList.contains('modal__backdrop'))
+    closeModal()
+})
+
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModal()
 })

@@ -20,6 +20,7 @@
 
     <!-- Floating delete buttons -->
     <button id="deleteObjectBtn" class="btn btn--danger btn--floating is-hidden" aria-label="Eliminar objeto">×</button>
+    <button id="configObjectBtn" class="btn btn--secondary btn--floating is-hidden" aria-label="Configurar objeto">⚙</button>
     <button id="deleteCollisionBtn" class="btn btn--info btn--floating is-hidden" aria-label="Eliminar colisión">×</button>
   </div>
 
@@ -82,6 +83,24 @@
     <button id="addObject" class="btn" disabled>Añadir</button>
     <button id="saveObjects" class="btn">Guardar</button>
   </aside>
+
+  <!-- Modal NIVEL -->
+  <div id="levelModal" class="modal hidden">
+    <div class="modal__backdrop"></div>
+
+    <div class="modal__content" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <h3 id="modalTitle">Nivel de superposición</h3>
+
+      <input type="number"
+             id="nivelInput"
+             min="0" max="3" step="1" />
+
+      <div class="modal__buttons">
+        <button id="nivelCancel" class="btn">Cancelar</button>
+        <button id="nivelSave" class="btn btn--primary">Guardar</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Scripts -->
   <script src="src/js/utils.js"></script>
