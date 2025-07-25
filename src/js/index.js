@@ -13,6 +13,77 @@ function dbg(...args) {
   if (DEBUG) console.log('[DBG]', ...args)
 }
 
+let __frame = 0
+
+function isPlayerRef(s) {
+  return s === player || s?.isPlayer === true || s?.id === 'player' || s?.type === 'player'
+}
+function toNumber(n) {
+  const v = Number(n)
+  return Number.isFinite(v) ? v : 0
+}
+function getFootRect(s) {
+  try {
+    if (isPlayerRef(s) && typeof playerFootRect === 'function') return playerFootRect()
+    if (typeof s?.footRect === 'function') return s.footRect()
+    if (s?.footbox) return s.footbox
+    if (s?.hitbox) return s.hitbox
+    // Fallback a bounds básicos del sprite
+    const pos = { x: toNumber(s?.position?.x), y: toNumber(s?.position?.y) }
+    const width = toNumber(s?.width ?? s?.size?.width)
+    const height = toNumber(s?.height ?? s?.size?.height)
+    return { position: pos, width, height }
+  } catch (e) {
+    console.warn('[DBG] getFootRect error en', s, e)
+    return { position: { x: 0, y: 0 }, width: 0, height: 0 }
+  }
+}
+function nivelOf(s) {
+  const raw = s?.nivel
+  const n = Number(raw)
+  return Number.isFinite(n) ? n : 0
+}
+
+// Orden entre OBJETOS (nunca interviene el jugador aquí)
+function cmpObjects(a, b) {
+  if (background && a === background) return -1
+  if (background && b === background) return 1
+  const aLvl = nivelOf(a), bLvl = nivelOf(b)
+  if (aLvl !== bLvl) return aLvl - bLvl
+  const aY = bottomY(a), bY = bottomY(b)
+  if (aY !== bY) return aY - bY
+  return (a.__zStable ?? 0) - (b.__zStable ?? 0) // estable
+}
+
+// Construye el array final "alrededor" del player
+function orderAroundPlayer(list) {
+  const hasBg = !!background && list.includes(background)
+  const hasPlayer = list.some(isPlayerRef)
+  const out = []
+  if (!hasPlayer) {
+    // Fallback: no hay player en escena
+    const only = hasBg ? list.filter(s => s !== background) : list.slice()
+    only.sort(cmpObjects)
+    if (hasBg) out.push(background)
+    out.push(...only)
+    return out
+  }
+  const p = list.find(isPlayerRef)
+  const pY = bottomY(p)
+  const others = list.filter(s => s !== p && (!hasBg || s !== background))
+  const behind = []
+  const front  = []
+  for (const s of others) {
+    (bottomY(s) <= pY ? behind : front).push(s) // empate por Y → detrás del player
+  }
+  behind.sort(cmpObjects)
+  front.sort(cmpObjects)
+  if (hasBg) out.push(background)
+  out.push(...behind, p, ...front)
+  return out
+}
+
+
 // ------------- CSS HELPERS -----------------------------------------------
 function showElement(element) {
   element.classList.remove('is-hidden')
@@ -129,6 +200,10 @@ const player = new Sprite({
   }
 })
 
+// Identificación del jugador (por si cambia la referencia)
+player.id = 'player'
+player.isPlayer = true
+
 // Devuelve el rectángulo de colisión solo para la mitad inferior
 function playerFootRect() {
   return {
@@ -239,6 +314,12 @@ function updateFloatingButtons() {
   }
 }
 
+function bottomY(s) {
+  const r = getFootRect(s)
+  const y = toNumber(r?.position?.y) + toNumber(r?.height)
+  return y
+}
+
 let frameCount = 0
 function animate() {
   const animationId = window.requestAnimationFrame(animate)
@@ -250,20 +331,13 @@ function animate() {
   }
 
   // ── ORDEN DE PROFUNDIDAD ───────────────────────────────────────────
-  // 1 · el fondo SIEMPRE primero
-  renderables.sort((a, b) => {
-    if (a === background) return -1
-    if (b === background) return 1
+  __frame++
+  // Etiquetas estables para orden determinístico
+  renderables.forEach((s, i) => { s.__zStable = i })
 
-    const aLvl = a.nivel ?? 0
-    const bLvl = b.nivel ?? 0
-    if (aLvl !== bLvl) return aLvl - bLvl // 0 debajo de 1, 1 debajo de 2…
-
-    // "pie" del sprite (y + alto); si no tiene height usa 0
-    const ay = (a.position?.y || 0) + (a.height || 0)
-    const by = (b.position?.y || 0) + (b.height || 0)
-    return ay - by
-  })
+  // Particionar por player y reconstruir
+  const ordered = orderAroundPlayer(renderables)
+  renderables.splice(0, renderables.length, ...ordered)
 
   // 2 · pintar ya en orden correcto
   renderables.forEach((renderable, index) => {
@@ -289,6 +363,7 @@ function animate() {
     const f = playerFootRect()
     c.strokeRect(f.position.x, f.position.y, f.width, f.height)
   }
+
 
   // --- Pinta rectángulos de colisión -------------------------------------------------
   if (
