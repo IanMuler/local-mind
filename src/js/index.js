@@ -73,7 +73,8 @@ const objectMode = {
     'img/objetos/Piano.png',
     'img/objetos/Silla.png',
     'img/objetos/Escritorio.png',
-    'img/objetos/Monitor.png'
+    'img/objetos/Monitor.png',
+    'img/objetos/Teclado y mouse.png'
   ],
   selectedIdx: null, // índice en palette
   selectedId: null, // índice del objeto seleccionado para flechas
